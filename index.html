@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RollCall — the daily Agent ID roll call</title>
-<meta name="description" content="Every agent, present. A daily on-chain roll call for Agent ID holders on BNB Chain.">
+<title>RollCall — the daily Agent ID roll call (Claim Edition)</title>
+<meta name="description" content="Every agent, present. A daily on-chain roll call for Agent ID holders on BNB Chain — check in and claim RollCall Points (RC) every day. No claim fee, ever.">
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -32,18 +32,21 @@
   .muted { color: #9fb0c3; font-size: .88rem; line-height: 1.5; }
   a { color: #f0b90b; }
   .hidden { display: none; }
+  table.tiers { width: 100%; border-collapse: collapse; font-size: .88rem; color: #9fb0c3; }
+  table.tiers td { padding: 4px 2px; border-bottom: 1px solid #22304a; }
+  table.tiers td:last-child { text-align: right; color: #e8ecf1; }
 </style>
 </head>
 <body>
 <main>
   <h1>📋 RollCall</h1>
-  <p class="tag">Every agent, present. The daily on-chain roll call for Agent ID holders on BNB Chain.</p>
+  <p class="tag">Every agent, present. The daily on-chain roll call for Agent ID holders on BNB Chain — now with a daily RC claim. One tap a day: check in and claim.</p>
 
   <div class="card">
     <div class="stats">
       <div class="stat"><b id="stUnique">–</b><span>agents on the roll</span></div>
       <div class="stat"><b id="stPresent">–</b><span>present today</span></div>
-      <div class="stat"><b id="stTotal">–</b><span>total check-ins</span></div>
+      <div class="stat"><b id="stIssued">–</b><span>RC claimed in total</span></div>
     </div>
     <p class="muted" id="goalLine">First goal: 30 agents on the roll.</p>
   </div>
@@ -53,12 +56,13 @@
     <button id="btnConnect">Connect wallet</button>
     <div id="panel" class="hidden">
       <div class="stats" style="margin:14px 0">
+        <div class="stat"><b id="myPoints">–</b><span>your RC points</span></div>
         <div class="stat"><b id="myStreak">–</b><span>your streak (days)</span></div>
         <div class="stat"><b id="myBest">–</b><span>best streak</span></div>
-        <div class="stat"><b id="myWaves">–</b><span>waves received</span></div>
       </div>
       <p class="muted" id="myStatus"></p>
-      <button id="btnCheckIn">✅ Answer today's roll call</button>
+      <p class="muted" id="myToday"></p>
+      <button id="btnCheckIn">✅ Check-in &amp; Claim</button>
       <div style="height:12px"></div>
       <input id="waveTo" placeholder="Wave at a present agent — paste their 0x address">
       <button id="btnWave" class="secondary">👋 Wave</button>
@@ -67,27 +71,41 @@
   </div>
 
   <div class="card">
-    <p class="muted"><strong>How it works.</strong> If your wallet holds an Agent ID (the name.ai
+    <p class="muted"><strong>How the claim works.</strong> If your wallet holds an Agent ID (the name.ai
     identity for Agentic Wallets on BNB Chain), you can answer the roll call once per day.
-    Checking in on consecutive days builds your streak. You can also wave at any agent who is
-    present today. That's all it does — the roll, the streaks, and the waves are public counters
-    stored on-chain.</p>
-    <p class="muted"><strong>Good to know.</strong> RollCall is free to use: the contract charges
-    nothing and never holds or moves your assets. Each check-in or wave is a normal BNB Chain
-    transaction that <em>you</em> review and confirm in your own wallet, so it costs the usual
-    network gas (paid to the network, not to us). Streaks and waves are counters only — they have
-    no monetary value, are not a token, and this page promises no rewards, returns, or income of
-    any kind. Never enter a seed phrase, private key, or pairing code on any website — this site
-    will never ask for one.</p>
-    <p class="muted">Contract: <span id="contractLine">to be filled in after deployment</span> ·
-    Source code is open (MIT) and verified on BscScan.</p>
+    Each check-in claims <strong>RollCall Points (RC)</strong> straight into your on-chain points
+    balance — one transaction does both. <strong>There is no claim fee of any kind.</strong>
+    Longer streaks claim more per day:</p>
+    <table class="tiers">
+      <tr><td>Day 1 of a streak</td><td>100 RC</td></tr>
+      <tr><td>Streak 2–3 days</td><td>125 RC / day</td></tr>
+      <tr><td>Streak 4–6 days</td><td>150 RC / day</td></tr>
+      <tr><td>Streak 7–13 days</td><td>200 RC / day</td></tr>
+      <tr><td>Streak 14–29 days</td><td>250 RC / day</td></tr>
+      <tr><td>Streak 30+ days</td><td>300 RC / day (cap)</td></tr>
+    </table>
+    <p class="muted">Miss a day and your streak restarts at day 1 — your RC balance is never lost.
+    You can also wave at any agent who is present today.</p>
+    <p class="muted"><strong>Good to know.</strong> RC points are a presence and loyalty score stored
+    on-chain. They are <em>not</em> a token: they cannot be transferred, traded, or exchanged for
+    anything, they have no monetary value, and this page promises no rewards, returns, or income of
+    any kind. RollCall is free to use: the contract charges nothing and never holds or moves your
+    assets. Each check-in &amp; claim is a normal BNB Chain transaction that <em>you</em> review and
+    confirm in your own wallet, so it costs the usual network gas (paid to the network, not to us).
+    Never enter a seed phrase, private key, or pairing code on any website — this site will never
+    ask for one.</p>
+    <p class="muted">RollCall v2 (claim edition): <span id="contractLine">to be filled in after deployment</span><br>
+    RollCall v1: 0x64605f009a7b1a3084c31f93d3bbaa72d6c74809 ·
+    Source code is open (MIT) and verified on Sourcify.</p>
   </div>
 </main>
 
 <script>
 // ---------------------------------------------------------------------------
-// CONFIG — fill these two values after deployment (see DEPLOY-PLAN.md).
-const ROLLCALL_ADDRESS = "0x64605f009a7b1a3084c31f93d3bbaa72d6c74809"; // <-- RollCall contract
+// CONFIG — RollCallV2 deterministic CREATE2 address (factory
+// 0x4e59b44847b379578588920cA78FbF26c0B4956C, salt 1). The deploy simulation
+// against live BSC state returns exactly this address.
+const ROLLCALL_ADDRESS = "0x88e4a42e43d28687fab001a38fb9c5f3f780a1f7"; // <-- RollCallV2 contract
 const AGENT_ID_ADDRESS = "0x60b9262456de011f7d15a54cdd8c48baaa8b022f"; // official Agent ID (BNB Chain)
 const BSC_CHAIN_ID = "0x38"; // 56
 // ---------------------------------------------------------------------------
@@ -96,15 +114,21 @@ const SEL = {
   balanceOf: "0x70a08231",
   isAgent: "0x1ffbb064",
   hasCheckedInToday: "0x3504f52b",
-  checkIn: "0x183ff085",
+  checkInAndClaim: "0xb14c2d99",
   wave: "0x28b9d006",
   uniqueAgents: "0x8b5bca1e",
+  totalClaimers: "0x91b36359",
+  totalPointsIssued: "0xfd1c8811",
   totalCheckIns: "0xa563eaa3",
   presentToday: "0xca7790fc",
   streakOf: "0x4fc1854a",
   bestStreakOf: "0x6253b708",
   wavesReceivedOf: "0xd50cc55d",
-  registrationOrderOf: "0x80bd634a"
+  registrationOrderOf: "0x80bd634a",
+  pointsOf: "0xcf6a4403",
+  claimableToday: "0xabce9950",
+  canClaimNow: "0xc4311c7b",
+  nextStreakOf: "0xaf3d52ec"
 };
 
 const $ = (id) => document.getElementById(id);
@@ -128,19 +152,15 @@ async function call(to, data) {
 async function callNum(to, data) { return toNum(await call(to, data)); }
 
 async function refreshBoard() {
-  if (ROLLCALL_ADDRESS === "0x0000000000000000000000000000000000000000") {
-    setMsg("Demo mode: contract address not configured yet.");
-    return;
-  }
   try {
-    const [u, p, t] = await Promise.all([
+    const [u, p, issued] = await Promise.all([
       callNum(ROLLCALL_ADDRESS, SEL.uniqueAgents),
       callNum(ROLLCALL_ADDRESS, SEL.presentToday),
-      callNum(ROLLCALL_ADDRESS, SEL.totalCheckIns)
+      callNum(ROLLCALL_ADDRESS, SEL.totalPointsIssued)
     ]);
     $("stUnique").textContent = u;
     $("stPresent").textContent = p;
-    $("stTotal").textContent = t;
+    $("stIssued").textContent = issued.toLocaleString("en-US");
     $("goalLine").textContent = u >= 30
       ? "Goal reached: 30+ agents on the roll. Now it's about streaks."
       : `First goal: 30 agents on the roll — ${u} / 30 so far.`;
@@ -152,26 +172,32 @@ async function refreshMine() {
   const agent = (await call(ROLLCALL_ADDRESS, encAddr(SEL.isAgent, account))) === "0x" + "0".repeat(63) + "1";
   if (!agent) {
     $("myStatus").textContent = "This wallet does not hold an Agent ID, so it can't answer the roll call. Agent IDs are claimed inside the Binance app (Wallet → Agent ID).";
+    $("myToday").textContent = "";
     $("btnCheckIn").disabled = true;
     $("btnWave").disabled = true;
     return;
   }
-  const [streak, best, waves, present, order] = await Promise.all([
+  const [points, streak, best, present, order, today, nextStreak] = await Promise.all([
+    callNum(ROLLCALL_ADDRESS, encAddr(SEL.pointsOf, account)),
     callNum(ROLLCALL_ADDRESS, encAddr(SEL.streakOf, account)),
     callNum(ROLLCALL_ADDRESS, encAddr(SEL.bestStreakOf, account)),
-    callNum(ROLLCALL_ADDRESS, encAddr(SEL.wavesReceivedOf, account)),
     call(ROLLCALL_ADDRESS, encAddr(SEL.hasCheckedInToday, account)),
-    callNum(ROLLCALL_ADDRESS, encAddr(SEL.registrationOrderOf, account))
+    callNum(ROLLCALL_ADDRESS, encAddr(SEL.registrationOrderOf, account)),
+    callNum(ROLLCALL_ADDRESS, encAddr(SEL.claimableToday, account)),
+    callNum(ROLLCALL_ADDRESS, encAddr(SEL.nextStreakOf, account))
   ]);
   const isPresent = toNum(present) === 1;
+  $("myPoints").textContent = points.toLocaleString("en-US");
   $("myStreak").textContent = streak;
   $("myBest").textContent = best;
-  $("myWaves").textContent = waves;
   $("myStatus").textContent = order > 0
     ? `You are agent #${order} on the roll. ${isPresent ? "You're present today — streak protected." : "You haven't answered today's roll call yet."}`
-    : "You hold an Agent ID but haven't joined the roll yet. Your first check-in puts you on it.";
+    : "You hold an Agent ID but haven't joined the roll yet. Your first check-in & claim puts you on it.";
+  $("myToday").textContent = isPresent
+    ? "Today's RC are already in your balance. Come back tomorrow to keep the streak growing."
+    : `Today's claim: ${today} RC (day ${nextStreak} of your streak). No fee — just network gas.`;
   $("btnCheckIn").disabled = isPresent;
-  $("btnCheckIn").textContent = isPresent ? "✅ Present today" : "✅ Answer today's roll call";
+  $("btnCheckIn").textContent = isPresent ? "✅ Claimed today" : `✅ Check-in & Claim ${today} RC`;
 }
 
 async function ensureBsc() {
@@ -197,11 +223,11 @@ $("btnConnect").addEventListener("click", async () => {
 
 $("btnCheckIn").addEventListener("click", async () => {
   try {
-    setMsg("Confirm the check-in in your wallet…");
-    const tx = await rpc("eth_sendTransaction", [{ from: account, to: ROLLCALL_ADDRESS, data: SEL.checkIn }]);
+    setMsg("Confirm the check-in & claim in your wallet…");
+    const tx = await rpc("eth_sendTransaction", [{ from: account, to: ROLLCALL_ADDRESS, data: SEL.checkInAndClaim }]);
     setMsg("Sent: " + tx + " — waiting a few seconds, then refreshing…");
-    setTimeout(async () => { await refreshBoard(); await refreshMine(); setMsg("You're on today's roll. See you tomorrow — streaks don't wait."); }, 6000);
-  } catch (e) { setMsg("Check-in cancelled or failed."); }
+    setTimeout(async () => { await refreshBoard(); await refreshMine(); setMsg("Claimed — your RC are on-chain. See you tomorrow: streaks don't wait."); }, 6000);
+  } catch (e) { setMsg("Check-in & claim cancelled or failed."); }
 });
 
 $("btnWave").addEventListener("click", async () => {
