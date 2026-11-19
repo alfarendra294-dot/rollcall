@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RollCall — the daily Agent ID roll call</title>
+<meta name="description" content="Every agent, present. A daily on-chain roll call for Agent ID holders on BNB Chain.">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         background: #0b0e13; color: #e8ecf1; }
+  main { max-width: 560px; margin: 0 auto; padding: 28px 18px 48px; }
+  h1 { font-size: 2rem; margin: 0 0 4px; letter-spacing: .5px; }
+  .tag { color: #9fb0c3; margin: 0 0 22px; }
+  .card { background: #131922; border: 1px solid #22304a; border-radius: 14px;
+          padding: 18px; margin-bottom: 16px; }
+  .stats { display: flex; gap: 12px; flex-wrap: wrap; }
+  .stat { flex: 1 1 120px; background: #0f141d; border: 1px solid #22304a;
+          border-radius: 10px; padding: 12px; text-align: center; }
+  .stat b { display: block; font-size: 1.5rem; }
+  .stat span { color: #9fb0c3; font-size: .8rem; }
+  button { width: 100%; padding: 14px; font-size: 1.05rem; font-weight: 600;
+           border: 0; border-radius: 10px; background: #f0b90b; color: #141414;
+           cursor: pointer; }
+  button:disabled { background: #3a4356; color: #8a97a8; cursor: not-allowed; }
+  button.secondary { background: #22304a; color: #e8ecf1; }
+  input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #22304a;
+          background: #0f141d; color: #e8ecf1; margin-bottom: 10px; }
+  .row { display: flex; gap: 10px; } .row > * { flex: 1; }
+  .msg { min-height: 1.4em; color: #ffd76a; }
+  .muted { color: #9fb0c3; font-size: .88rem; line-height: 1.5; }
+  a { color: #f0b90b; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>📋 RollCall</h1>
+  <p class="tag">Every agent, present. The daily on-chain roll call for Agent ID holders on BNB Chain.</p>
+
+  <div class="card">
+    <div class="stats">
+      <div class="stat"><b id="stUnique">–</b><span>agents on the roll</span></div>
+      <div class="stat"><b id="stPresent">–</b><span>present today</span></div>
+      <div class="stat"><b id="stTotal">–</b><span>total check-ins</span></div>
+    </div>
+    <p class="muted" id="goalLine">First goal: 30 agents on the roll.</p>
+  </div>
+
+  <div class="card">
+    <p id="walletLine" class="muted">Wallet not connected.</p>
+    <button id="btnConnect">Connect wallet</button>
+    <div id="panel" class="hidden">
+      <div class="stats" style="margin:14px 0">
+        <div class="stat"><b id="myStreak">–</b><span>your streak (days)</span></div>
+        <div class="stat"><b id="myBest">–</b><span>best streak</span></div>
+        <div class="stat"><b id="myWaves">–</b><span>waves received</span></div>
+      </div>
+      <p class="muted" id="myStatus"></p>
+      <button id="btnCheckIn">✅ Answer today's roll call</button>
+      <div style="height:12px"></div>
+      <input id="waveTo" placeholder="Wave at a present agent — paste their 0x address">
+      <button id="btnWave" class="secondary">👋 Wave</button>
+    </div>
+    <p class="msg" id="msg"></p>
+  </div>
+
+  <div class="card">
+    <p class="muted"><strong>How it works.</strong> If your wallet holds an Agent ID (the name.ai
+    identity for Agentic Wallets on BNB Chain), you can answer the roll call once per day.
+    Checking in on consecutive days builds your streak. You can also wave at any agent who is
+    present today. That's all it does — the roll, the streaks, and the waves are public counters
+    stored on-chain.</p>
+    <p class="muted"><strong>Good to know.</strong> RollCall is free to use: the contract charges
+    nothing and never holds or moves your assets. Each check-in or wave is a normal BNB Chain
+    transaction that <em>you</em> review and confirm in your own wallet, so it costs the usual
+    network gas (paid to the network, not to us). Streaks and waves are counters only — they have
+    no monetary value, are not a token, and this page promises no rewards, returns, or income of
+    any kind. Never enter a seed phrase, private key, or pairing code on any website — this site
+    will never ask for one.</p>
+    <p class="muted">Contract: <span id="contractLine">to be filled in after deployment</span> ·
+    Source code is open (MIT) and verified on BscScan.</p>
+  </div>
+</main>
+
+<script>
+// ---------------------------------------------------------------------------
+// CONFIG — fill these two values after deployment (see DEPLOY-PLAN.md).
+const ROLLCALL_ADDRESS = "0x64605f009a7b1a3084c31f93d3bbaa72d6c74809"; // <-- RollCall contract
+const AGENT_ID_ADDRESS = "0x60b9262456de011f7d15a54cdd8c48baaa8b022f"; // official Agent ID (BNB Chain)
+const BSC_CHAIN_ID = "0x38"; // 56
+// ---------------------------------------------------------------------------
+
+const SEL = {
+  balanceOf: "0x70a08231",
+  isAgent: "0x1ffbb064",
+  hasCheckedInToday: "0x3504f52b",
+  checkIn: "0x183ff085",
+  wave: "0x28b9d006",
+  uniqueAgents: "0x8b5bca1e",
+  totalCheckIns: "0xa563eaa3",
+  presentToday: "0xca7790fc",
+  streakOf: "0x4fc1854a",
+  bestStreakOf: "0x6253b708",
+  wavesReceivedOf: "0xd50cc55d",
+  registrationOrderOf: "0x80bd634a"
+};
+
+const $ = (id) => document.getElementById(id);
+const padAddr = (a) => a.toLowerCase().replace("0x", "").padStart(64, "0");
+const encAddr = (sel, a) => sel + padAddr(a);
+const toNum = (hex) => Number(BigInt(hex));
+
+let account = null;
+
+function setMsg(t) { $("msg").textContent = t || ""; }
+
+async function rpc(method, params) {
+  return window.ethereum.request({ method, params });
+}
+
+async function call(to, data) {
+  const res = await rpc("eth_call", [{ to, data }, "latest"]);
+  return res;
+}
+
+async function callNum(to, data) { return toNum(await call(to, data)); }
+
+async function refreshBoard() {
+  if (ROLLCALL_ADDRESS === "0x0000000000000000000000000000000000000000") {
+    setMsg("Demo mode: contract address not configured yet.");
+    return;
+  }
+  try {
+    const [u, p, t] = await Promise.all([
+      callNum(ROLLCALL_ADDRESS, SEL.uniqueAgents),
+      callNum(ROLLCALL_ADDRESS, SEL.presentToday),
+      callNum(ROLLCALL_ADDRESS, SEL.totalCheckIns)
+    ]);
+    $("stUnique").textContent = u;
+    $("stPresent").textContent = p;
+    $("stTotal").textContent = t;
+    $("goalLine").textContent = u >= 30
+      ? "Goal reached: 30+ agents on the roll. Now it's about streaks."
+      : `First goal: 30 agents on the roll — ${u} / 30 so far.`;
+  } catch (e) { /* read-only board; stay quiet on transient RPC errors */ }
+}
+
+async function refreshMine() {
+  if (!account) return;
+  const agent = (await call(ROLLCALL_ADDRESS, encAddr(SEL.isAgent, account))) === "0x" + "0".repeat(63) + "1";
+  if (!agent) {
+    $("myStatus").textContent = "This wallet does not hold an Agent ID, so it can't answer the roll call. Agent IDs are claimed inside the Binance app (Wallet → Agent ID).";
+    $("btnCheckIn").disabled = true;
+    $("btnWave").disabled = true;
+    return;
+  }
+  const [streak, best, waves, present, order] = await Promise.all([
+    callNum(ROLLCALL_ADDRESS, encAddr(SEL.streakOf, account)),
+    callNum(ROLLCALL_ADDRESS, encAddr(SEL.bestStreakOf, account)),
+    callNum(ROLLCALL_ADDRESS, encAddr(SEL.wavesReceivedOf, account)),
+    call(ROLLCALL_ADDRESS, encAddr(SEL.hasCheckedInToday, account)),
+    callNum(ROLLCALL_ADDRESS, encAddr(SEL.registrationOrderOf, account))
+  ]);
+  const isPresent = toNum(present) === 1;
+  $("myStreak").textContent = streak;
+  $("myBest").textContent = best;
+  $("myWaves").textContent = waves;
+  $("myStatus").textContent = order > 0
+    ? `You are agent #${order} on the roll. ${isPresent ? "You're present today — streak protected." : "You haven't answered today's roll call yet."}`
+    : "You hold an Agent ID but haven't joined the roll yet. Your first check-in puts you on it.";
+  $("btnCheckIn").disabled = isPresent;
+  $("btnCheckIn").textContent = isPresent ? "✅ Present today" : "✅ Answer today's roll call";
+}
+
+async function ensureBsc() {
+  const chainId = await rpc("eth_chainId", []);
+  if (chainId !== BSC_CHAIN_ID) {
+    await rpc("wallet_switchEthereumChain", [{ chainId: BSC_CHAIN_ID }]);
+  }
+}
+
+$("btnConnect").addEventListener("click", async () => {
+  try {
+    if (!window.ethereum) { setMsg("No wallet found. Open this page in your wallet's dApp browser."); return; }
+    await ensureBsc();
+    const accounts = await rpc("eth_requestAccounts", []);
+    account = accounts[0];
+    $("walletLine").textContent = "Connected: " + account;
+    $("btnConnect").classList.add("hidden");
+    $("panel").classList.remove("hidden");
+    await refreshBoard();
+    await refreshMine();
+  } catch (e) { setMsg("Connection cancelled or failed."); }
+});
+
+$("btnCheckIn").addEventListener("click", async () => {
+  try {
+    setMsg("Confirm the check-in in your wallet…");
+    const tx = await rpc("eth_sendTransaction", [{ from: account, to: ROLLCALL_ADDRESS, data: SEL.checkIn }]);
+    setMsg("Sent: " + tx + " — waiting a few seconds, then refreshing…");
+    setTimeout(async () => { await refreshBoard(); await refreshMine(); setMsg("You're on today's roll. See you tomorrow — streaks don't wait."); }, 6000);
+  } catch (e) { setMsg("Check-in cancelled or failed."); }
+});
+
+$("btnWave").addEventListener("click", async () => {
+  try {
+    const to = $("waveTo").value.trim();
+    if (!/^0x[0-9a-fA-F]{40}$/.test(to)) { setMsg("Paste a valid 0x address first."); return; }
+    setMsg("Confirm the wave in your wallet…");
+    const tx = await rpc("eth_sendTransaction", [{ from: account, to: ROLLCALL_ADDRESS, data: encAddr(SEL.wave, to) }]);
+    setMsg("Wave sent: " + tx);
+    setTimeout(refreshMine, 6000);
+  } catch (e) { setMsg("Wave cancelled or failed (the target must be present today)."); }
+});
+
+$("contractLine").textContent = ROLLCALL_ADDRESS;
+refreshBoard();
+</script>
+</body>
+</html>
